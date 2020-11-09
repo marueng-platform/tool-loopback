@@ -65,9 +65,8 @@ void thread_pcap(std::map<int, std::string> arg, std::list<Ethernet> networks)
     PcapPacketHeader pkhdr;
     double first_time = 0;
     double pcap_curr_time = 0;
-    struct timespec timespec_check;
-    struct timespec timespec_1sec;
-    int send_bitrate = 0;
+    timespec timespec_check;
+    timespec timespec_1sec;
     long long file_length;
     long long file_pos = 0;
     unsigned char ip_buffer[10240] = { 0, };
@@ -77,24 +76,46 @@ void thread_pcap(std::map<int, std::string> arg, std::list<Ethernet> networks)
     bool use_re_stamp = false;
     std::string path;
     sockaddr_in server_addr;
+    int send_bitrate = 0;
     u_int sock= 0;
     u_int addr_len = sizeof(struct sockaddr);
     FILE *file;
     sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     memset(&server_addr, 0, addr_len);
-    struct in_addr localInterface;
+    in_addr localInterface;
+    auto pcap_path = arg.find(e_ARG_INPUT_PCAP);
     auto output_nic = arg.find(e_ARG_OUTPUT_NIC);
     auto output_udp = arg.find(e_ARG_OUTPUT_UDP);
     InOutParam output_param;
+    setlocale(LC_NUMERIC, "");
 
     if(output_nic != arg.end()){
-        use_output_nic = true;
+        for(auto it: networks){
+            std::string interface = it.interface;
+            if(output_nic->second.compare("lo") == 0){
+                localInterface.s_addr = inet_addr(it.address);
+                if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_IF, (char *)&localInterface, sizeof(localInterface)) < 0) {
+                    printf("setting local interface\n");
+                }
+                use_output_nic = true;
+                printf("OutputNIC[lo], 127.0.0.1\n");
+                break;
+            }
+            if(output_nic->second.compare(interface) == 0){
+                localInterface.s_addr = inet_addr(it.address);
+                if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_IF, (char *)&localInterface, sizeof(localInterface)) < 0) {
+                    printf("setting local interface\n");
+                }
+                use_output_nic = true;
+                printf("OutputNIC[%s], %s\n", it.interface, it.address);
+                break;
+            }
+        }
     }
     if(output_udp != arg.end()){
         use_re_stamp = true;
         output_param = parse_inout(output_udp->second);
         auto addrs = split(output_param.udp, (char*)":");
-
         server_addr.sin_family = AF_INET;
         server_addr.sin_port = htons(std::stoi(addrs[1]));
         server_addr.sin_addr.s_addr = inet_addr(addrs[0].c_str());
@@ -107,11 +128,15 @@ void thread_pcap(std::map<int, std::string> arg, std::list<Ethernet> networks)
         return;
     }
 
+    if(pcap_path != arg.end()){
+       path = pcap_path->second;
+    }
+
     file = fopen(path.c_str(), "rb");
     if (file == NULL) {
-        printf("Err : %s\n", path.c_str());
+        RED("ERROR PCAP Open : %s\n", path.c_str());
     } else {
-        printf("StartPcap : %s\n", path.c_str());
+        YELLOW("StartPcap : %s\n", path.c_str());
         usleep(1000000);
         fseek(file, 0, SEEK_END);
         file_length = ftell(file);
@@ -141,30 +166,32 @@ void thread_pcap(std::map<int, std::string> arg, std::list<Ethernet> networks)
                             usleep(100);
                         }
                         read = fread(ip_buffer, 1, pkhdr.incl_len, file);
-                        send_bitrate += read;
                         if (read > 0) {
                             file_pos += read;
                             if(use_output_nic){
-                                parse_ip(ip_buffer, &ip_h);
-                                parse_udp(ip_buffer + 20, &udp_h);
-
+                                parse_ip(ip_buffer + 14, &ip_h);
+                                parse_udp(ip_buffer + 14 + 20, &udp_h);
                                 server_addr.sin_family = AF_INET;
                                 server_addr.sin_port = htons(udp_h.dest_port);
                                 server_addr.sin_addr.s_addr = htonl(ip_h.dest);
                             }
-                            if (sendto(sock, ip_buffer + 28, read - 28, 0,
+                            if (sendto(sock, ip_buffer + 14 + 28, read - 14 - 28, 0,
                                        (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
+                            }else{
+                                send_bitrate += read - 28;
                             }
                             usleep(100);
                         }
                     }
                     if (diff_time(timespec_1sec) >= 1.0) {
                         clock_gettime(CLOCK_MONOTONIC, &timespec_1sec);
+                        printf("Sending : %'d bytes\n", send_bitrate);
                         send_bitrate = 0;
                     }
                 }
             }
             fseek(file, 0, SEEK_SET);
+            YELLOW("Loop %s\n", path.c_str());
             usleep(1000);
         }
         fclose(file);

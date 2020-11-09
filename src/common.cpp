@@ -49,11 +49,9 @@ int parse_arg(int argc, void **argv, std::map<int, std::string>&args){
             parse_inout(str);
         }
     }
-    if(input == true && output == true){
-        return e_ARG_OK;
-    }else{
-        return e_ARG_EXCEPT;
+    if(input == true && output == true) {
     }
+    return e_ARG_OK;
 }
 
 InOutParam parse_inout(std::string arg)

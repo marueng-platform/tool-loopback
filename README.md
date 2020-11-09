@@ -30,3 +30,6 @@ ___
 
 ####Pcap Sender
 
+./loopback -pcap {PCAP 경로} -o {송신할 NIC}
+
+./loopback -pcap /root/sample.pcap -o eth1
