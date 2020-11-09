@@ -14,7 +14,6 @@
 #include <unistd.h>
 #include <thread>
 #include <netinet/in.h>
-//#include <net/if.h>
 #include <arpa/inet.h>
 #include <linux/if_arp.h>
 #include <stdio.h>
@@ -22,11 +21,21 @@
 #include <sys/ioctl.h>
 #include <tuple>
 
+#define ANSI_COLOR_WHITE "\x1B[37m"
+#define ANSI_COLOR_RED "\x1B[31m"
+#define ANSI_COLOR_GREEN "\x1B[32m"
+#define ANSI_COLOR_YELLOW "\x1B[33m"
+#define ANSI_COLOR_RESET "\x1B[0m"
+
+
+#define YELLOW(fmt, ...) printf(ANSI_COLOR_YELLOW"" fmt ANSI_COLOR_RESET, ##__VA_ARGS__)
+#define WHITE(fmt, ...) printf(ANSI_COLOR_WHITE"" fmt ANSI_COLOR_RESET, ##__VA_ARGS__)
+#define RED(fmt, ...) printf(ANSI_COLOR_RED"" fmt ANSI_COLOR_RESET,  ##__VA_ARGS__)
+#define GREEN(fmt, ...) printf(ANSI_COLOR_GREEN"" fmt ANSI_COLOR_RESET, ##__VA_ARGS__)
+
 
 #define inaddrr(x) (*(struct in_addr *) &ifr->x[sizeof sa.sin_port])
 #define IFRSIZE   ((int)(size * sizeof (struct ifreq)))
-
-
 
 typedef struct {
 
@@ -109,5 +118,6 @@ std::list<Ethernet> GetNetworkInterface();
 int parse_ip(const unsigned char* data, ip_header_t* ip);
 int parse_udp(const unsigned char* data, udp_header_t *udp);
 int parse_arg(int argc, void **argv, std::map<int, std::string>&args);
+InOutParam parse_inout(std::string arg);
 
 #endif //LOOPBACK_COMMON_H

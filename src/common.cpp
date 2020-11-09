@@ -56,6 +56,44 @@ int parse_arg(int argc, void **argv, std::map<int, std::string>&args){
     }
 }
 
+InOutParam parse_inout(std::string arg)
+{
+    InOutParam inout;
+    auto items = split(arg,(char*)"?");
+    int size = items.size();
+
+    auto udp_f = [](std::string s) -> std::tuple<bool, std::string>{
+        std::string val;
+        bool find = false;
+        int head = s.find("udp://");
+        if(head == 0){
+            val = s.substr(6, s.size() - 6);
+            find = true;
+        }
+        return std::make_tuple(find, val);
+    };
+
+    if(size == 2){
+        auto p = split(items[1], (char*)"&");
+        for(auto it: p){
+            if(it.find("adapter") == 0){
+                auto dict = split(it, (char*)"=");
+                if(dict.size() == 2){
+                    inout.adapter = dict[1];
+                }
+            }
+        }
+    }
+    if(items[0].find("udp://") == 0){
+        auto r = udp_f(items[0]);
+        if(std::get<0>(r)){
+            inout.udp = std::get<1>(r);
+        }
+    }
+//    printf("%s, %s\n", inout.udp.c_str(), inout.adapter.c_str());
+    return inout;
+}
+
 
 double diff_time(timespec start)
 {

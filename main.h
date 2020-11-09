@@ -12,5 +12,4 @@ void thread_sender(std::map<int, std::string> arg, std::list<Ethernet> networks)
 void thread_loop(std::map<int, std::string>arg, std::list<Ethernet> networks);
 bool gRunning = true;
 
-
 #endif //LOOPBACK_MAIN_H

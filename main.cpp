@@ -3,12 +3,15 @@
 
 int main(int argc, void** argv)
 {
+    GREEN("VERSION:%s\n\n", VERSION);
+
     int mode = 0;
-    auto networks = GetNetworkInterface();
-    for(auto it: networks){
-        printf("%s, %s\n", it.interface, it.address);
-    }
     std::thread *th = NULL;
+    auto networks = GetNetworkInterface();
+    YELLOW("Network Interfaces\n");
+    for(auto it: networks){
+        printf("[%s] %s\n", it.interface, it.address);
+    }
     std::map<int, std::string> args;
     make_map();
     int rs = parse_arg(argc,argv, args);
@@ -16,7 +19,7 @@ int main(int argc, void** argv)
         case e_ARG_VERSION:
         case e_ARG_HELP:
         case e_ARG_EXCEPT:
-            printf("return\n");
+            RED("ERROR Param\n");
             return 0;
         default:
             break;
@@ -31,15 +34,19 @@ int main(int argc, void** argv)
               args.find(e_ARG_OUTPUT_UDP) != args.end()){
         mode = e_MODE_UDP_TO_UDP;
     }
+    printf("\n\n");
 
     switch (mode) {
         case e_MODE_BYPASS:
+            YELLOW("[Mode] Bypass Mode\n");
             th = new std::thread(thread_loop, args, networks);
             break;
         case e_MODE_FILE_TO_UDP:
+            YELLOW("[Mode] Pcap Mode\n");
             th = new std::thread(thread_pcap, args, networks);
             break;
         case e_MODE_UDP_TO_UDP:
+            YELLOW("[Mode] UDP to UDP\n");
             th = new std::thread(thread_sender, args, networks);
             break;
         default:
@@ -51,43 +58,6 @@ int main(int argc, void** argv)
     return 0;
 }
 
-InOutParam parse_inout(std::string arg)
-{
-    InOutParam inout;
-    auto items = split(arg,(char*)"?");
-    int size = items.size();
-
-    auto udp_f = [](std::string s) -> std::tuple<bool, std::string>{
-        std::string val;
-        bool find = false;
-        int head = s.find("udp://");
-        if(head == 0){
-            val = s.substr(6, s.size() - 6);
-            find = true;
-        }
-        return std::make_tuple(find, val);
-    };
-
-    if(size == 2){
-        auto p = split(items[1], (char*)"&");
-        for(auto it: p){
-            if(it.find("adapter") == 0){
-                auto dict = split(it, (char*)"=");
-                if(dict.size() == 2){
-                   inout.adapter = dict[1];
-                }
-            }
-        }
-    }
-    if(items[0].find("udp://") == 0){
-        auto r = udp_f(items[0]);
-        if(std::get<0>(r)){
-            inout.udp = std::get<1>(r);
-        }
-    }
-    printf("%s, %s\n", inout.udp.c_str(), inout.adapter.c_str());
-    return inout;
-}
 
 void thread_pcap(std::map<int, std::string> arg, std::list<Ethernet> networks)
 {
@@ -222,9 +192,6 @@ void thread_sender(std::map<int, std::string> arg, std::list<Ethernet> networks)
     udp_header_t  udp_h;
     sockaddr_in server_addr;
     struct ip_mreq group;
-    struct sockaddr_in c_addr;
-    socklen_t c_len= 0;
-    char buf[2048] = {0, };
     u_int sender= 0;
     u_int receiver = 0;
     u_int addr_len = sizeof(struct sockaddr);
@@ -255,9 +222,9 @@ void thread_sender(std::map<int, std::string> arg, std::list<Ethernet> networks)
     if (setsockopt(receiver, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&group, sizeof(group)) < 0) {
         printf("err\n");
     }else{
-        printf("Join\n");
-        printf("mcast : %s\n", addrs[0].c_str());
-        printf("interface : %s\n", input_param.adapter.c_str());
+        printf("\n[Input UDP]\n");
+        printf("UDP : %s\n", addrs[0].c_str());
+        printf("Interface IP : %s\n", input_param.adapter.c_str());
         recv_port = std::stoi(addrs[1]);
     }
     if(output_udp != arg.end()) {
@@ -270,6 +237,9 @@ void thread_sender(std::map<int, std::string> arg, std::list<Ethernet> networks)
         if (setsockopt(sender, IPPROTO_IP, IP_MULTICAST_IF, (char *) &localInterface, sizeof(localInterface)) < 0) {
             printf("setting local interface\n");
         }
+        printf("\n[Output UDP]\n");
+        printf("UDP : %s:%d\n", addrs[0].c_str(), std::stoi(addrs[1]));
+        printf("Interface IP : %s\n", output_param.adapter.c_str());
     }
 
     for(auto it: networks){
@@ -285,17 +255,37 @@ void thread_sender(std::map<int, std::string> arg, std::list<Ethernet> networks)
        return;
     }
 
+
+    timespec time;
+    clock_gettime(CLOCK_MONOTONIC, &time);
+    int received_bytes = 0;
+    int send_bytes = 0;
+    int error_count = 0;
+    setlocale(LC_NUMERIC, "");
     while(gRunning){
         const uint8_t *packet = pcap_next(i_hdl, &pcap_pkt);
         if(packet != NULL){
             parse_ip(packet + 14, &ip_h);
             parse_udp(packet + 14 + 20, &udp_h);
             if(udp_h.dest_port == recv_port){
+                received_bytes += udp_h.length - 8;
                 if(sendto(sender, packet + 28 + 14, pcap_pkt.len - 28 - 14, 0,
                           (struct sockaddr*) &server_addr, sizeof(server_addr)) < 0 ){
-                    printf("error, len:%d\n", pcap_pkt.len);
+                    error_count++;
+                }else{
+                    send_bytes += pcap_pkt.len - 28 - 14;
                 }
             }
+        }
+        if(diff_time(time) >= 1.0){
+            printf("[R] %'d bytes > [S] %'d bytes\n", received_bytes, send_bytes);
+            if(error_count> 0){
+                RED("SendError : %d\n", error_count);
+            }
+            received_bytes = 0;
+            send_bytes = 0;
+            error_count = 0;
+            clock_gettime(CLOCK_MONOTONIC, &time);
         }
         usleep(1);
     }

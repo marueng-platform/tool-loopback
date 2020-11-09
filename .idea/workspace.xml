@@ -29,11 +29,13 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="bca70265-1e0d-4710-978a-44ad58af7496" name="Default Changelist" comment="First Commit">
+    <list default="true" id="bca70265-1e0d-4710-978a-44ad58af7496" name="Default Changelist" comment="Release 1.0">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/main.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.h" beforeDir="false" afterPath="$PROJECT_DIR$/main.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/common.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/common.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/common.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/common.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -66,7 +68,8 @@
     <property name="node.js.path.for.package.tslint" value="project" />
     <property name="node.js.selected.package.eslint" value="(autodetect)" />
     <property name="node.js.selected.package.tslint" value="(autodetect)" />
-    <property name="settings.editor.selected.configurable" value="CMakeSettings" />
+    <property name="nodejs_package_manager_path" value="npm" />
+    <property name="settings.editor.selected.configurable" value="CPPToolchains" />
   </component>
   <component name="RunManager">
     <configuration default="true" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" PASS_PARENT_ENVS_2="true">
@@ -94,7 +97,7 @@
       <option name="presentableId" value="Default" />
       <updated>1604705634644</updated>
       <workItem from="1604705636024" duration="897000" />
-      <workItem from="1604706603398" duration="1753000" />
+      <workItem from="1604706603398" duration="4916000" />
     </task>
     <task id="LOCAL-00001" summary="First Commit">
       <created>1604705726577</created>
@@ -103,7 +106,14 @@
       <option name="project" value="LOCAL" />
       <updated>1604705726577</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Release 1.0">
+      <created>1604883551073</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1604883551074</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -123,40 +133,47 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="First Commit" />
-    <option name="LAST_COMMIT_MESSAGE" value="First Commit" />
+    <MESSAGE value="Release 1.0" />
+    <option name="LAST_COMMIT_MESSAGE" value="Release 1.0" />
   </component>
   <component name="WindowStateProjectService">
     <state x="360" y="203" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1604708330763">
       <screen x="0" y="23" width="1792" height="1037" />
     </state>
     <state x="360" y="203" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.23.1792.1037@0.23.1792.1037" timestamp="1604708330763" />
-    <state width="1750" height="283" key="GridCell.Tab.0.bottom" timestamp="1604708303234">
-      <screen x="0" y="23" width="1792" height="1037" />
+    <state width="875" height="283" key="GridCell.Tab.0.bottom" timestamp="1604887177169">
+      <screen x="0" y="23" width="1792" height="1041" />
     </state>
     <state width="1750" height="283" key="GridCell.Tab.0.bottom/0.23.1792.1037@0.23.1792.1037" timestamp="1604708303234" />
-    <state width="1750" height="283" key="GridCell.Tab.0.center" timestamp="1604708303233">
-      <screen x="0" y="23" width="1792" height="1037" />
+    <state width="875" height="283" key="GridCell.Tab.0.bottom/0.23.1792.1041@0.23.1792.1041" timestamp="1604887177169" />
+    <state width="875" height="283" key="GridCell.Tab.0.center" timestamp="1604887177168">
+      <screen x="0" y="23" width="1792" height="1041" />
     </state>
     <state width="1750" height="283" key="GridCell.Tab.0.center/0.23.1792.1037@0.23.1792.1037" timestamp="1604708303233" />
-    <state width="1750" height="283" key="GridCell.Tab.0.left" timestamp="1604708303232">
-      <screen x="0" y="23" width="1792" height="1037" />
+    <state width="875" height="283" key="GridCell.Tab.0.center/0.23.1792.1041@0.23.1792.1041" timestamp="1604887177168" />
+    <state width="875" height="283" key="GridCell.Tab.0.left" timestamp="1604887177167">
+      <screen x="0" y="23" width="1792" height="1041" />
     </state>
     <state width="1750" height="283" key="GridCell.Tab.0.left/0.23.1792.1037@0.23.1792.1037" timestamp="1604708303232" />
-    <state width="1750" height="283" key="GridCell.Tab.0.right" timestamp="1604708303233">
-      <screen x="0" y="23" width="1792" height="1037" />
+    <state width="875" height="283" key="GridCell.Tab.0.left/0.23.1792.1041@0.23.1792.1041" timestamp="1604887177167" />
+    <state width="875" height="283" key="GridCell.Tab.0.right" timestamp="1604887177168">
+      <screen x="0" y="23" width="1792" height="1041" />
     </state>
     <state width="1750" height="283" key="GridCell.Tab.0.right/0.23.1792.1037@0.23.1792.1037" timestamp="1604708303233" />
-    <state x="397" y="180" key="SettingsEditor" timestamp="1604707973251">
-      <screen x="0" y="23" width="1792" height="1037" />
+    <state width="875" height="283" key="GridCell.Tab.0.right/0.23.1792.1041@0.23.1792.1041" timestamp="1604887177168" />
+    <state x="397" y="181" key="SettingsEditor" timestamp="1604887015665">
+      <screen x="0" y="23" width="1792" height="1041" />
     </state>
     <state x="397" y="180" key="SettingsEditor/0.23.1792.1037@0.23.1792.1037" timestamp="1604707973251" />
-    <state x="844" y="281" key="Vcs.Push.Dialog.v2" timestamp="1604705753504">
+    <state x="397" y="181" key="SettingsEditor/0.23.1792.1041@0.23.1792.1041" timestamp="1604887015665" />
+    <state x="844" y="281" key="Vcs.Push.Dialog.v2" timestamp="1604883568282">
       <screen x="0" y="23" width="1792" height="1037" />
     </state>
-    <state x="844" y="281" key="Vcs.Push.Dialog.v2/0.23.1792.1037@0.23.1792.1037" timestamp="1604705753504" />
-    <state x="909" y="253" width="670" height="676" key="search.everywhere.popup" timestamp="1604707242483">
-      <screen x="0" y="23" width="1792" height="1037" />
+    <state x="844" y="281" key="Vcs.Push.Dialog.v2/0.23.1792.1037@0.23.1792.1037" timestamp="1604883568282" />
+    <state x="909" y="254" width="670" height="679" key="search.everywhere.popup" timestamp="1604887275732">
+      <screen x="0" y="23" width="1792" height="1041" />
     </state>
     <state x="909" y="253" width="670" height="676" key="search.everywhere.popup/0.23.1792.1037@0.23.1792.1037" timestamp="1604707242483" />
+    <state x="909" y="254" width="670" height="679" key="search.everywhere.popup/0.23.1792.1041@0.23.1792.1041" timestamp="1604887275732" />
   </component>
 </project>
