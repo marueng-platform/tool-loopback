@@ -14,7 +14,7 @@
 #include <unistd.h>
 #include <thread>
 #include <netinet/in.h>
-#include <net/if.h>
+//#include <net/if.h>
 #include <arpa/inet.h>
 #include <linux/if_arp.h>
 #include <stdio.h>

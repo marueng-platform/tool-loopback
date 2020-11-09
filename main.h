@@ -7,9 +7,9 @@
 
 #include "src/common.h"
 
-void thread_pcap(std::map<int, std::string> arg);
-void thread_sender(std::map<int, std::string> arg);
-void thread_loop(std::map<int, std::string>arg);
+void thread_pcap(std::map<int, std::string> arg, std::list<Ethernet> networks);
+void thread_sender(std::map<int, std::string> arg, std::list<Ethernet> networks);
+void thread_loop(std::map<int, std::string>arg, std::list<Ethernet> networks);
 bool gRunning = true;
 
 

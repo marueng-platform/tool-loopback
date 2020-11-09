@@ -4,8 +4,8 @@
 int main(int argc, void** argv)
 {
     int mode = 0;
-    auto eth = GetNetworkInterface();
-    for(auto it: eth){
+    auto networks = GetNetworkInterface();
+    for(auto it: networks){
         printf("%s, %s\n", it.interface, it.address);
     }
     std::thread *th = NULL;
@@ -34,13 +34,13 @@ int main(int argc, void** argv)
 
     switch (mode) {
         case e_MODE_BYPASS:
-            th = new std::thread(thread_loop, args);
+            th = new std::thread(thread_loop, args, networks);
             break;
         case e_MODE_FILE_TO_UDP:
-            th = new std::thread(thread_pcap, args);
+            th = new std::thread(thread_pcap, args, networks);
             break;
         case e_MODE_UDP_TO_UDP:
-            th = new std::thread(thread_sender, args);
+            th = new std::thread(thread_sender, args, networks);
             break;
         default:
             break;
@@ -89,7 +89,7 @@ InOutParam parse_inout(std::string arg)
     return inout;
 }
 
-void thread_pcap(std::map<int, std::string> arg)
+void thread_pcap(std::map<int, std::string> arg, std::list<Ethernet> networks)
 {
     PcapHeader mainhdr;
     PcapPacketHeader pkhdr;
@@ -201,7 +201,7 @@ void thread_pcap(std::map<int, std::string> arg)
     }
 }
 
-void thread_loop(std::map<int, std::string> arg){
+void thread_loop(std::map<int, std::string> arg, std::list<Ethernet> networks){
     char err[1024] = {0,};
     pcap_t* i_hdl;
     pcap_t* o_hdl;
@@ -215,7 +215,7 @@ void thread_loop(std::map<int, std::string> arg){
     }
 }
 
-void thread_sender(std::map<int, std::string> arg)
+void thread_sender(std::map<int, std::string> arg, std::list<Ethernet> networks)
 {
     char err[1024] = {0,};
     ip_header_t ip_h;
@@ -228,8 +228,8 @@ void thread_sender(std::map<int, std::string> arg)
     u_int sender= 0;
     u_int receiver = 0;
     u_int addr_len = sizeof(struct sockaddr);
-    pcap_t* i_hdl;
-    pcap_t* o_hdl;
+    pcap_t* i_hdl = NULL;
+    pcap_t* o_hdl = NULL;
     pcap_pkthdr pcap_pkt;
     receiver = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
     sender = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -272,7 +272,19 @@ void thread_sender(std::map<int, std::string> arg)
         }
     }
 
-    i_hdl = pcap_open_live("enx00e04c691294", 2000, 1, 10, err);
+    for(auto it: networks){
+        std::string ip = it.address;
+        if(ip.compare(input_param.adapter) == 0){
+            i_hdl = pcap_open_live(it.interface, 2000, 1, 10, err);
+            break;
+        }
+    }
+
+    if(i_hdl == NULL){
+        printf("Input Error\n");
+       return;
+    }
+
     while(gRunning){
         const uint8_t *packet = pcap_next(i_hdl, &pcap_pkt);
         if(packet != NULL){
