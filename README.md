@@ -25,9 +25,23 @@ $ ./loopback -input udp://239.0.0.3:30000?adapter=192.168.1.156 -output udp://10
 ```shell
 $ ./loopback -i eno1 -o lo
 ```
-## Pcap Sender
+## Pcap Sender 1
 
 > ./loopback -pcap {PCAP 경로} -o {송신할 NIC}
 ```shell
 ./loopback -pcap /root/sample.pcap -o eth1
+```
+
+## Pcap Sender 2
+
+> ./loopback -pcap {PCAP 경로} -filter udp://{멀티캐스트 주소} -o {송신할 NIC}
+```shell
+./loopback -pcap /root/sample.pcap -filter udp://239.0.0.3:34000 -o eth1
+```
+
+## Pcap Sender 3
+
+> ./loopback -pcap {PCAP 경로} -filter udp://{필터할 멀티캐스트주소} -o {송신할 NIC} -output udp://{멀티캐스트주소}
+```shell
+./loopback -pcap /root/sample.pcap -filter udp://239.0.0.3:34000 -o eth1 -output udp://239.0.0.3:30000
 ```

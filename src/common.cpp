@@ -14,6 +14,7 @@ int make_map() {
     k_arg_map["-o"] = e_ARG_OUTPUT_NIC;
     k_arg_map["-input"] = e_ARG_INPUT_UDP;
     k_arg_map["-output"] = e_ARG_OUTPUT_UDP;
+    k_arg_map["-filter"] = e_ARG_INPUT_FILTER;
     return 0;
 }
 

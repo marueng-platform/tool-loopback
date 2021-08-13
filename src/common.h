@@ -88,6 +88,8 @@ typedef enum{
     e_ARG_OUTPUT_NIC,
     e_ARG_INPUT_UDP,
     e_ARG_OUTPUT_UDP,
+    e_ARG_INPUT_FILTER,
+    e_ARG_OUTPUT_FILTER,
     e_ARG_OK,
 }enum_ARG;
 

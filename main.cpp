@@ -72,8 +72,11 @@ void thread_pcap(std::map<int, std::string> arg, std::list<Ethernet> networks)
     unsigned char ip_buffer[10240] = { 0, };
     ip_header_t ip_h;
     udp_header_t udp_h;
+    unsigned int filter_ip_dst = 0;
+    unsigned short filter_udp_dst = 0;
     bool use_output_nic = false;
     bool use_re_stamp = false;
+    bool use_filter = false;
     std::string path;
     sockaddr_in server_addr;
     int send_bitrate = 0;
@@ -86,6 +89,7 @@ void thread_pcap(std::map<int, std::string> arg, std::list<Ethernet> networks)
     auto pcap_path = arg.find(e_ARG_INPUT_PCAP);
     auto output_nic = arg.find(e_ARG_OUTPUT_NIC);
     auto output_udp = arg.find(e_ARG_OUTPUT_UDP);
+    auto input_filter = arg.find(e_ARG_INPUT_FILTER);
     InOutParam output_param;
     setlocale(LC_NUMERIC, "");
 
@@ -125,7 +129,15 @@ void thread_pcap(std::map<int, std::string> arg, std::list<Ethernet> networks)
         }
     }
     if(use_output_nic == false && use_re_stamp){
+        printf("Don't Use both -o -output");
         return;
+    }
+    if(input_filter != arg.end()){
+        use_filter = true;
+        auto filter = parse_inout(input_filter->second);
+        auto addrs = split(filter.udp, (char*)":");
+        filter_ip_dst = inet_addr(addrs[0].c_str());
+        filter_udp_dst = htons(std::stoi(addrs[1]));
     }
 
     if(pcap_path != arg.end()){
@@ -168,13 +180,22 @@ void thread_pcap(std::map<int, std::string> arg, std::list<Ethernet> networks)
                         read = fread(ip_buffer, 1, pkhdr.incl_len, file);
                         if (read > 0) {
                             file_pos += read;
+                            bool skip = false;
+                            parse_ip(ip_buffer + 14, &ip_h);
+                            parse_udp(ip_buffer + 14 + 20, &udp_h);
+
+                            if(use_filter){
+                                if(ip_h.dest == filter_ip_dst && udp_h.dest_port == filter_udp_dst){
+                                    continue;
+                                }
+                            }
+
                             if(use_output_nic){
-                                parse_ip(ip_buffer + 14, &ip_h);
-                                parse_udp(ip_buffer + 14 + 20, &udp_h);
                                 server_addr.sin_family = AF_INET;
                                 server_addr.sin_port = htons(udp_h.dest_port);
                                 server_addr.sin_addr.s_addr = htonl(ip_h.dest);
                             }
+
                             if (sendto(sock, ip_buffer + 14 + 28, read - 14 - 28, 0,
                                        (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
                             }else{
