@@ -1,4 +1,5 @@
 #include <cstring>
+#include <math.h>
 #include "main.h"
 
 int main(int argc, void** argv)
@@ -136,8 +137,18 @@ void thread_pcap(std::map<int, std::string> arg, std::list<Ethernet> networks)
         use_filter = true;
         auto filter = parse_inout(input_filter->second);
         auto addrs = split(filter.udp, (char*)":");
-        filter_ip_dst = inet_addr(addrs[0].c_str());
-        filter_udp_dst = htons(std::stoi(addrs[1]));
+        u_int ip_dst = 0;
+        if(addrs.size() == 2){
+            auto ip_v = split(addrs.front(), (char*)".");
+            int i = 3;
+            for (auto it: ip_v){
+                auto num = atoi(it.c_str());
+                ip_dst += (num * pow(256, i));
+                i -= 1;
+            }
+            filter_ip_dst = ip_dst;
+        }
+        filter_udp_dst = std::stoi(addrs[1]);
     }
 
     if(pcap_path != arg.end()){
@@ -185,12 +196,15 @@ void thread_pcap(std::map<int, std::string> arg, std::list<Ethernet> networks)
                             parse_udp(ip_buffer + 14 + 20, &udp_h);
 
                             if(use_filter){
-                                if(ip_h.dest == filter_ip_dst && udp_h.dest_port == filter_udp_dst){
+                                if(ip_h.dest != filter_ip_dst || udp_h.dest_port != filter_udp_dst){
                                     continue;
                                 }
                             }
 
-                            if(use_output_nic){
+                            if(use_re_stamp){
+
+                            }
+                            else if(use_output_nic){
                                 server_addr.sin_family = AF_INET;
                                 server_addr.sin_port = htons(udp_h.dest_port);
                                 server_addr.sin_addr.s_addr = htonl(ip_h.dest);
