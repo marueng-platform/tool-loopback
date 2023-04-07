@@ -86,7 +86,7 @@ void thread_pcap(std::map<int, std::string> arg, std::list<Ethernet> networks)
     bool use_filter = false;
     std::string path;
     sockaddr_in server_addr;
-    int send_bitrate = 0;
+    int send_bytes = 0;
     u_int sock= 0;
     u_int addr_len = sizeof(struct sockaddr);
     FILE *file;
@@ -175,7 +175,8 @@ void thread_pcap(std::map<int, std::string> arg, std::list<Ethernet> networks)
             file_pos = 0;
             int read = fread(&mainhdr, 1, sizeof(mainhdr), file);
             first_time = 0;
-            send_bitrate = 0;
+            send_bytes = 0;
+            long long send_bytes_total = 0;
             if (read > 0) {
                 file_pos += read;
                 while (file_length > file_pos && gRunning == true) {
@@ -219,15 +220,17 @@ void thread_pcap(std::map<int, std::string> arg, std::list<Ethernet> networks)
                             if (sendto(sock, ip_buffer + 14 + 28, read - 14 - 28, 0,
                                        (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
                             }else{
-                                send_bitrate += read - 28;
+                                send_bytes += read - 28;
                             }
                             usleep(100);
                         }
                     }
                     if (diff_time(timespec_1sec) >= 1.0) {
+                        send_bytes_total += (long long)send_bytes;
                         clock_gettime(CLOCK_MONOTONIC, &timespec_1sec);
-                        printf("Sending : %'d bytes\n", send_bitrate);
-                        send_bitrate = 0;
+                        auto percent = (double)send_bytes_total / (double)file_length * 100.0;
+                        printf("Sending : %'d bytes, Process : %.2f %\n", send_bytes, percent);
+                        send_bytes = 0;
                     }
                 }
             }
@@ -246,9 +249,18 @@ void thread_loop(std::map<int, std::string> arg, std::list<Ethernet> networks){
     pcap_pkthdr pcap_pkt;
     i_hdl = pcap_open_live(arg[e_ARG_INPUT_NIC].c_str(), 2000, 1, 10, err);
     o_hdl = pcap_open_live(arg[e_ARG_OUTPUT_NIC].c_str(), 2000, 1, 10, err);
+    timespec time;
+    clock_gettime(CLOCK_MONOTONIC, &time);
+    int loop_bytes = 0;
     while(gRunning){
         const uint8_t *packet = pcap_next(i_hdl, &pcap_pkt);
         pcap_sendpacket(o_hdl, packet, pcap_pkt.len);
+        if(diff_time(time) >= 1.0){
+            clock_gettime(CLOCK_MONOTONIC, &time);
+            printf("[%s > %s]  %'d bytes\n", arg[e_ARG_INPUT_NIC].c_str(), arg[e_ARG_OUTPUT_NIC].c_str(), loop_bytes);
+            loop_bytes = 0;
+        }
+        loop_bytes += pcap_pkt.len;
         usleep(1);
     }
 }

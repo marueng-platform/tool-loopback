@@ -108,7 +108,6 @@ InOutParam parse_inout(std::string arg)
             inout.udp = std::get<1>(r);
         }
     }
-//    printf("%s, %s\n", inout.udp.c_str(), inout.adapter.c_str());
     return inout;
 }
 
