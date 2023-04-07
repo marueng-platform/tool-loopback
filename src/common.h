@@ -119,7 +119,8 @@ int get_addr(int sock, char * ifname, struct sockaddr * ifaddr);
 std::list<Ethernet> GetNetworkInterface();
 int parse_ip(const unsigned char* data, ip_header_t* ip);
 int parse_udp(const unsigned char* data, udp_header_t *udp);
-int parse_arg(int argc, void **argv, std::map<int, std::string>&args);
+int parse_arg(int argc, char **argv, std::map<int, std::string>&args);
 InOutParam parse_inout(std::string arg);
+int help_print();
 
 #endif //LOOPBACK_COMMON_H

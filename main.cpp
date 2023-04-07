@@ -2,10 +2,10 @@
 #include <math.h>
 #include "main.h"
 
-int main(int argc, void** argv)
+int main(int argc, char **argv)
 {
-    GREEN("VERSION:%s\n\n", VERSION);
-
+    GREEN("VERSION:%s\n", VERSION);
+    GREEN("Copyright MARUENG, john\n\n");
     int mode = 0;
     std::thread *th = NULL;
     auto networks = GetNetworkInterface();
@@ -15,12 +15,18 @@ int main(int argc, void** argv)
     }
     std::map<int, std::string> args;
     make_map();
+    if(argc <= 1){
+        YELLOW("\nUnknown arguments\n");
+        help_print();
+        return -1;
+    }
     int rs = parse_arg(argc,argv, args);
     switch (rs){
         case e_ARG_VERSION:
         case e_ARG_HELP:
         case e_ARG_EXCEPT:
             RED("ERROR Param\n");
+            help_print();
             return 0;
         default:
             break;

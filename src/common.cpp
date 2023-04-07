@@ -18,7 +18,26 @@ int make_map() {
     return 0;
 }
 
-int parse_arg(int argc, void **argv, std::map<int, std::string>&args){
+int help_print(){
+    GREEN("ex) Multicast to Unicast\n");
+    printf("./loopback -input udp://{Receive Multicast}?adapter={Receiver ip} -output udp://{Unicast address}?adapter={Sender ip}\n");
+    printf("./loopback -input udp://239.0.0.3:30000?adapter=192.168.1.156 -output udp://10.7.23.33:8888?adapter=127.0.0.1\n");
+    GREEN("\nex) Network Loopback\n");
+    printf("./loopback -i {Receiver NIC} -o {Sender NIC}\n");
+    printf("./loopback -i eno1 -o lo\n");
+    GREEN("\nex)Pcap Sender Mode 1\n");
+    printf("./loopback -pcap {PCAP path} -o {Sender NIC}\n");
+    printf("./loopback -pcap /root/sample.pcap -o eth1\n");
+    GREEN("\nex)Pcap Sender Mode 2\n");
+    printf("./loopback -pcap {PCAP path} -filter udp://{Multicast Address} -o {Sender NIC}\n");
+    printf("./loopback -pcap /root/sample.pcap -filter udp://239.0.0.3:34000 -o eth1\n");
+    GREEN("\nex)Pcap Sender Mode 3\n");
+    printf("./loopback -pcap {PCAP path} -filter udp://{Multicast Filter Address} -o {Receiver NIC} -output udp://{Output Multicast Address}\n");
+    printf("./loopback -pcap /root/sample.pcap -filter udp://239.0.0.3:34000 -o eth1 -output udp://239.0.0.3:30000\n");
+    return 0;
+}
+
+int parse_arg(int argc, char **argv, std::map<int, std::string>&args){
     int i;
     bool input = false;
     bool output = false;
