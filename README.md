@@ -9,6 +9,15 @@ $ git clone https://github.com/skyno486/loopback.git
 $ cmake CMakeLists.txt
 $ make
 ```
+## Rocky 8
+```shell
+$ dnf --enablerepo=devel install libpcap-devel
+$ yum install cmake
+$ git clone https://github.com/skyno486/loopback.git 
+$ cmake CMakeLists.txt
+$ make
+```
+
 # Getting Started
 
 ## Multicast to Unicast
