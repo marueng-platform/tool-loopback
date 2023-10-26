@@ -5,7 +5,6 @@
 ```shell
 $ yum install libpcap-devel
 $ yum install cmake
-$ git clone https://github.com/skyno486/loopback.git 
 $ cmake CMakeLists.txt
 $ make
 ```
@@ -13,7 +12,6 @@ $ make
 ```shell
 $ dnf --enablerepo=devel install libpcap-devel
 $ yum install cmake
-$ git clone https://github.com/skyno486/loopback.git 
 $ cmake CMakeLists.txt
 $ make
 ```
