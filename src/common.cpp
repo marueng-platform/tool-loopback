@@ -14,7 +14,9 @@ int make_map() {
     k_arg_map["-o"] = e_ARG_OUTPUT_NIC;
     k_arg_map["-input"] = e_ARG_INPUT_UDP;
     k_arg_map["-output"] = e_ARG_OUTPUT_UDP;
+    k_arg_map["-file"] = e_ARG_OUTPUT_FILE;
     k_arg_map["-filter"] = e_ARG_INPUT_FILTER;
+    k_arg_map["-mode"] = e_ARG_MODE;
     return 0;
 }
 
@@ -34,6 +36,12 @@ int help_print(){
     GREEN("\nex)Pcap Sender Mode 3\n");
     printf("./loopback -pcap {PCAP path} -filter udp://{Multicast Filter Address} -o {Receiver NIC} -output udp://{Output Multicast Address}\n");
     printf("./loopback -pcap /root/sample.pcap -filter udp://239.0.0.3:34000 -o eth1 -output udp://239.0.0.3:30000\n");
+    GREEN("\nex)Pcap to dump\n");
+    printf("./loopback -pcap {PCAP path} -mode pcap2file -output {Output path}\n");
+    printf("./loopback -pcap /root/sample.pcap -mode pcap2file -output /root/file.dat\n");
+    GREEN("\nex)DSTP Pcap to Pcap\n");
+    printf("./loopback -pcap {PCAP path} -mode dstp2pcap -output {Output path}\n");
+    printf("./loopback -pcap /root/dstp.pcap -mode dstp2pcap -output /root/demux.pcap\n");
     return 0;
 }
 
@@ -48,6 +56,10 @@ int parse_arg(int argc, char **argv, std::map<int, std::string>&args){
             std::cout << str << std::endl;
         }else if(str.find("--help") == 0) {
             std::cout << str << std::endl;
+        }else if(str.find("-input") == 0){
+            input = true;
+        }else if(str.find("-output") == 0){
+            output = true;
         }else if(str.find("-i") == 0){
             input = true;
         }else if(str.find("-o") == 0) {
@@ -250,3 +262,73 @@ int get_addr(int sock, char * ifname, struct sockaddr * ifaddr)
     printf("Address for %s: %s\n", ifname, inet_ntoa(inaddrr(ifr_addr.sa_data)));
     return 0;
 }
+
+int ParseUdp(const unsigned char* data, udp_header_t *udp)
+{
+    udp->src_port = htons(*((unsigned short*)& data[0]));
+    udp->dest_port = htons(*((unsigned short*)& data[2]));
+    udp->length = htons(*((unsigned short*)& data[4]));
+    udp->checksum = htons(*((unsigned short*)& data[6]));
+    return 8;
+}
+
+int ParseIp(const unsigned char* data, ip_header_t *ip)
+{
+    ip->header_length = ((int)(data[0] & 0x0F) * 4);
+    ip->total_length = (int)data[2] * 256 + (int)data[3];
+    ip->fragment = (data[6] >> 6) & 0x01;
+    ip->end_flag = (data[6] >> 5) & 0x01;
+    ip->frag_offset = ((int)(data[6] & 0x1F) * 256 + (int)data[7]) * 8;
+    ip->protocol = (unsigned char)data[9];
+    ip->src = htonl(*((unsigned long*)& data[12]));
+    ip->dest = htonl(*((unsigned long*)& data[16]));
+    ip->checksum = (int)data[10] * 256 + (int)data[11];
+    ip->id = (int)data[4] * 256 + (int)data[5];
+    return 20;
+}
+
+int ParseRtp(unsigned char* pData, RtpHeader * rtp)
+{
+    CBitcalc bitCalc(pData);
+    rtp->version = bitCalc.GetData(2);
+    rtp->padding = bitCalc.GetData(1);
+    rtp->extension = bitCalc.GetData(1);
+    rtp->CSRC_Count = bitCalc.GetData(4);
+    rtp->Marker = bitCalc.GetData(1);
+    rtp->payload_Type = bitCalc.GetData(7);
+    rtp->SequenceNum = bitCalc.GetData(16);
+    rtp->Timestamp = bitCalc.GetData(32);
+    short reserved = bitCalc.GetData(16);
+    rtp->Packet_Offset = bitCalc.GetData(16);
+    return 12;
+}
+
+int ParseDstp(unsigned char *pdata, DstpHeader *dstp) {
+    CBitcalc bitCalc(pdata);
+    dstp->dest_address = bitCalc.GetData(32);
+    if (dstp->dest_address > 0) {
+        dstp->port_number = bitCalc.GetData(16);
+        dstp->length = bitCalc.GetData(16);
+        dstp->group = bitCalc.GetData(16);
+        dstp->type = bitCalc.GetData(8);
+        dstp->random_access_point = bitCalc.GetData(1);
+        dstp->time_limit_flag = bitCalc.GetData(1);
+        if ( dstp->type >= 1 && dstp->type <= 5) {
+            printf("Wakeup_control:%d\n", bitCalc.GetData(2));
+        }else {
+            auto reserved = bitCalc.GetData(2);
+        }
+        dstp->signed_flag = bitCalc.GetData(1);
+        auto reserved = bitCalc.GetData(3);
+        if (dstp->time_limit_flag == 1) {
+            auto timestamp_min = bitCalc.GetData(32);
+            printf("Time Limit\n");
+        }
+        if (dstp->signed_flag == 1) {
+            // todo...
+            printf("GMAC_HEADER\n");
+        }
+    }
+    return bitCalc.GetCurrentCount();
+}
+

@@ -32,8 +32,22 @@ int main(int argc, char **argv)
             break;
     }
 
-    if(args.find(e_ARG_INPUT_PCAP) != args.end()){
+    if(args.find(e_ARG_INPUT_PCAP) != args.end()) {
         mode = e_MODE_FILE_TO_UDP;
+    } else if(args.find(e_ARG_MODE) != args.end()){
+        auto mode_s = args[e_ARG_MODE];
+        if (mode_s == "pcap2file") {
+            mode = e_MODE_PCAP_TO_FILE;
+        } else if (mode_s == "dstp2pcap") {
+            mode = e_MODE_DSTP_PCAP_TO_PCAP;
+        }else {
+            YELLOW("Need 'pcap2file' or 'dstp2pcap' value\n");
+            return 0;
+        }
+        if (args.find(e_ARG_INPUT_PCAP) != args.end() || args.find(e_ARG_OUTPUT_FILE) != args.end()) {
+            YELLOW("Need 'pcap' and 'file' argument\n");
+            return 0;
+        }
     } else if(args.find(e_ARG_INPUT_NIC) != args.end() &&
               args.find(e_ARG_OUTPUT_NIC) != args.end()){
        mode = e_MODE_BYPASS;
@@ -56,12 +70,18 @@ int main(int argc, char **argv)
             YELLOW("[Mode] UDP to UDP\n");
             th = new std::thread(thread_sender, args, networks);
             break;
+        case e_MODE_PCAP_TO_FILE:
+            YELLOW("[Mode] PCAP to file\n");
+            th = new std::thread(thread_pcap_to_file, args);
+            break;
+        case e_MODE_DSTP_PCAP_TO_PCAP:
+            YELLOW("[Mode] DSTP pcap to pcap\n");
+            th = new std::thread(thread_dstp_pcap_to_pcap, args);
+            break;
         default:
             break;
     }
-    while(true){
-        sleep(1);
-    }
+    th->join();
     return 0;
 }
 
@@ -265,6 +285,204 @@ void thread_loop(std::map<int, std::string> arg, std::list<Ethernet> networks){
     }
 }
 
+int thread_pcap_to_file(std::map<int, std::string> arg)
+{
+    PcapHeader global_header;
+    PcapPacketHeader packet_header;
+    unsigned char ip_buffer[10240] = { 0, };
+
+    auto input_path = arg.find(e_ARG_INPUT_PCAP);
+    auto output_path = arg.find(e_ARG_OUTPUT_FILE);
+
+    FILE* r_file = fopen(input_path->second.c_str(), "rb");
+    if (r_file == nullptr) {
+        printf("Error Open Read File= %s\n", input_path->second.c_str());
+        return -1;
+    }
+    FILE* w_file = fopen(output_path->second.c_str(), "wb");
+    if (w_file == nullptr) {
+        printf("Error Open Write File= %s\n", output_path->second.c_str());
+        fclose(r_file);
+        return -1;
+    }
+
+    fseek(r_file, 0, SEEK_END);
+    auto file_length = ftell(r_file);
+    fseek(r_file, 0, SEEK_SET);
+    printf("Start Pcap To Raw\n");
+
+    int read = fread(&global_header, 1, sizeof(global_header), r_file);
+    if (read > 0) {
+        int file_pos = read;
+        if(global_header.magic_number != PCAP_MAGIC_NUMBER){
+            printf("%u, %u\n", global_header.magic_number, PCAP_MAGIC_NUMBER);
+            fclose(r_file);
+            fclose(w_file);
+            printf("Error Pcap Header\n");
+            return -1;
+        }
+        fwrite(&global_header, 1, sizeof(global_header), w_file);
+        while (file_length > file_pos) {
+            read = fread(&packet_header, 1, sizeof(packet_header), r_file);
+            if (read > 0) {
+                file_pos += read;
+                read = fread(ip_buffer, 1, packet_header.incl_len, r_file);
+                if (read > 0) {
+                    file_pos += read;
+                    read -= MAC_IP_UDP_HEADER_LENGTH;
+
+                    // for Write Raw
+                    fwrite(ip_buffer + MAC_IP_UDP_HEADER_LENGTH, 1, read, w_file);
+                }
+            }else {
+                break;
+            }
+        }
+    }else {
+        printf("Error Read Pcap Header\n");
+        return -1;
+    }
+    return 0;
+}
+
+
+
+int thread_dstp_pcap_to_pcap(std::map<int, std::string> arg)
+{
+    PcapHeader global_header;
+    PcapPacketHeader packet_header;
+    unsigned char packet[65535] = { 0, };
+    unsigned char tmp_buffer[65535] = { 0, };
+
+    FILE* r_file;
+    FILE* w_file;
+
+    auto input_path = arg.find(e_ARG_INPUT_PCAP);
+    auto output_path = arg.find(e_ARG_OUTPUT_FILE);
+
+    r_file = fopen(input_path->second.c_str(), "rb");
+    if (r_file == nullptr) {
+        printf("Error Open Read File= %s\n", input_path->second.c_str());
+        return -1;
+    }
+    w_file = fopen(output_path->second.c_str(), "wb");
+    if (w_file == nullptr) {
+        printf("Error Open Write File= %s\n", output_path->second.c_str());
+        fclose(r_file);
+        return -1;
+    }
+
+
+    int es_count = 0;
+    unsigned short prev_seq = 0;
+    bool first_es = true;
+
+    printf("Start DstpPcap To Pcap\n");
+
+    fseek(r_file, 0, SEEK_END);
+    auto file_length = ftell(r_file);
+    fseek(r_file, 0, SEEK_SET);
+
+    int read = fread(&global_header, 1, sizeof(global_header), r_file);
+    if (read > 0) {
+        int file_pos = read;
+        if(global_header.magic_number != PCAP_MAGIC_NUMBER){
+            printf("%u, %u\n", global_header.magic_number, PCAP_MAGIC_NUMBER);
+            printf("Error Pcap Header\n");
+            return -1;
+        }
+        fwrite(&global_header, 1, sizeof(global_header), w_file);
+
+        while (file_length > file_pos) {
+            read = fread(&packet_header, 1, sizeof(packet_header), r_file);
+            if (read > 0) {
+                file_pos += read;
+                read = fread(packet, 1, packet_header.incl_len, r_file);
+                if (read > 0) {
+                    ip_header_t ip;
+                    udp_header_t udp;
+                    RtpHeader rtp;
+                    unsigned char mac[14] = {0, };
+                    file_pos += read;
+                    ParseIp(packet + MAC_HEADER_LENGTH, &ip);
+                    if(ip.protocol == 17){
+                        int body_len = packet_header.incl_len - MAC_IP_UDP_RTP_HEADER_LENGTH;
+                        memcpy(mac, packet, MAC_HEADER_LENGTH);
+                        ParseUdp(packet + MAC_HEADER_LENGTH + IP_HEADER_LENGTH, &udp);
+                        ParseRtp(packet + MAC_IP_UDP_HEADER_LENGTH, &rtp);
+                        unsigned char *body = packet + MAC_IP_UDP_RTP_HEADER_LENGTH;
+                        if (rtp.payload_Type != 81) {
+                            printf("Not Dstp\n");
+                            continue;
+                        }
+                        if (first_es) {
+                            if (rtp.Marker == 1) {
+                                first_es = false;
+                                memcpy(tmp_buffer, body + rtp.Packet_Offset, body_len - rtp.Packet_Offset);
+                                es_count = body_len - rtp.Packet_Offset;
+                                prev_seq = rtp.SequenceNum;
+                            }
+                            continue;
+                        }
+                        prev_seq += 1;
+                        if (rtp.SequenceNum != prev_seq) {
+                            printf("RTP Continuity Error\n");
+                            prev_seq = rtp.SequenceNum;
+                            continue;
+                        }
+                        if (rtp.Marker == 1) {
+                            if (rtp.Packet_Offset == 0) {
+                                memcpy(tmp_buffer + es_count, body, body_len);
+                                es_count += body_len;
+                            }else {
+                                memcpy(tmp_buffer + es_count, body, rtp.Packet_Offset);
+                                es_count += rtp.Packet_Offset;
+                            }
+                            int count = 0;
+                            while (count < es_count) {
+                                unsigned char *in_packet = tmp_buffer + count;
+                                DstpHeader dstp = {};
+                                int dstp_header_len = ParseDstp(in_packet, &dstp);
+                                if (count + dstp_header_len + dstp.length > es_count) {
+                                    break;
+                                }
+                                count += dstp_header_len;
+                                count += dstp.length;
+
+                                // for Write Pcap
+                                PcapPacketHeader pkt_header = {};
+                                pkt_header.ts_sec = packet_header.ts_sec;
+                                pkt_header.ts_usec = packet_header.ts_usec;
+                                pkt_header.orig_len = dstp.length + 14;
+                                pkt_header.incl_len= pkt_header.orig_len;
+                                fwrite(&pkt_header, 1, sizeof(pkt_header), w_file);
+                                fwrite(mac, 1, sizeof(mac), w_file);
+                                fwrite(in_packet + dstp_header_len, 1, dstp.length, w_file);
+                            }
+                            if (count != es_count) {
+                                memmove(tmp_buffer, tmp_buffer + count, es_count - count);
+                                es_count -= count;
+                            }else {
+                                es_count = 0;
+                            }
+                            if (rtp.Packet_Offset != 0) {
+                                memcpy(tmp_buffer, body + rtp.Packet_Offset, body_len - rtp.Packet_Offset);
+                                es_count = body_len - rtp.Packet_Offset;
+                            }
+                        }else {
+                            memcpy(tmp_buffer +es_count, body, body_len);
+                            es_count += body_len;
+                        }
+                    }
+                }
+            }
+        }
+    }else {
+        printf("Error Read Pcap Header\n");
+        return -1;
+    }
+    return 0;
+}
 void thread_sender(std::map<int, std::string> arg, std::list<Ethernet> networks)
 {
     char err[1024] = {0,};

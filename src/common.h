@@ -16,6 +16,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <linux/if_arp.h>
+#include "bitcalc.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
@@ -37,6 +38,16 @@
 #define inaddrr(x) (*(struct in_addr *) &ifr->x[sizeof sa.sin_port])
 #define IFRSIZE   ((int)(size * sizeof (struct ifreq)))
 
+#define MAC_HEADER_LENGTH 14
+#define IP_HEADER_LENGTH 20
+#define UDP_HEADER_LENGTH 8
+#define RTP_HEADER_LENGTH 12
+#define MAC_IP_UDP_RTP_HEADER_LENGTH 54
+
+#define MAC_IP_UDP_HEADER_LENGTH 42
+#define PCAP_MAGIC_NUMBER 0xA1B2C3D4
+#define PCAP_MAGIC_NUMBER_1 0xD4C3B2A1
+
 typedef struct {
 
     unsigned int magic_number; 	        /* magic number */
@@ -56,7 +67,7 @@ typedef struct {
     unsigned int orig_len;                 /* actual length of packet*/
 }  PcapPacketHeader;
 
-typedef struct ip_header_s
+typedef struct
 {
     int header_length;
     int total_length;
@@ -71,7 +82,7 @@ typedef struct ip_header_s
     unsigned char version;
 } ip_header_t;
 
-typedef struct udp_header_s
+typedef struct
 {
     unsigned short src_port;
     unsigned short dest_port;
@@ -90,6 +101,8 @@ typedef enum{
     e_ARG_OUTPUT_UDP,
     e_ARG_INPUT_FILTER,
     e_ARG_OUTPUT_FILTER,
+    e_ARG_OUTPUT_FILE,
+    e_ARG_MODE,
     e_ARG_OK,
 }enum_ARG;
 
@@ -109,7 +122,31 @@ typedef enum {
     e_MODE_BYPASS = 0,
     e_MODE_UDP_TO_UDP,
     e_MODE_FILE_TO_UDP,
+    e_MODE_PCAP_TO_FILE,
+    e_MODE_DSTP_PCAP_TO_PCAP
 }enum_MODE;
+typedef struct {
+    unsigned char version;
+    unsigned char padding;
+    unsigned char extension;
+    unsigned char CSRC_Count;
+    unsigned char Marker;
+    unsigned char payload_Type;
+    unsigned short SequenceNum;
+    unsigned int Timestamp;
+    unsigned int Packet_Offset;
+} RtpHeader;
+
+typedef struct {
+    unsigned int dest_address;
+    unsigned short port_number;
+    unsigned short length;
+    unsigned short group;
+    unsigned char type;
+    unsigned char random_access_point;
+    unsigned char time_limit_flag;
+    unsigned char signed_flag;
+}DstpHeader;
 
 int make_map();
 double diff_time(timespec start);
@@ -122,5 +159,8 @@ int parse_udp(const unsigned char* data, udp_header_t *udp);
 int parse_arg(int argc, char **argv, std::map<int, std::string>&args);
 InOutParam parse_inout(std::string arg);
 int help_print();
-
+int ParseUdp(const unsigned char* data, udp_header_t *udp);
+int ParseIp(const unsigned char* data, ip_header_t *ip);
+int ParseDstp(unsigned char *pdata, DstpHeader *dstp);
+int ParseRtp(unsigned char* pData, RtpHeader * rtp);
 #endif //LOOPBACK_COMMON_H
